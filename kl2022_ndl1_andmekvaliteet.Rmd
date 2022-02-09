@@ -1,0 +1,112 @@
+---
+title: "Andmekvaliteedi hindamine, andmelünkade ja erindite analüüs"
+author: "Indrek Soidla"
+date: "9 2 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+if (dir.exists("C:/Users/Public/Rstudio_packages")) {
+  .libPaths("C:/Users/Public/Rstudio_packages")
+}
+```
+
+## R Markdown
+
+Laeme sisse vajalikud paketid.
+
+```{r paketid, message = FALSE}
+library(haven)
+library(foreign)
+library(tidyverse)
+library(summarytools)
+```
+
+Laeme sisse Euroopa Sotsiaaluuringu Eesti 9. laine andmed (2018).
+
+```{r ess-andmed}
+ee9 <- read_sav("data/ESS9EE.sav")
+```
+
+Kui Maciga tekib probleeme andmete sisselugemisel või nende töötlemisel, võib proovida andmed sisse lugeda paketiga `foreign`.
+
+```{r ess-andmed-2}
+ee9 <- read.spss("data/ESS9EE.sav", to.data.frame = TRUE, use.value.labels = FALSE)
+```
+
+Eraldame meile huvipakkuvad tunnused.
+
+```{r andmed}
+andmed <- ee9 %>% 
+  select(stflife, imsmetn, imdfetn, impcntr, imbgeco, imueclt, imwbcnt, rlgdgr, brncntr, gndr, agea, eduyrs)
+```
+
+Vaatame andmekirjeldust, et näha, mis tunnused andmestikus on ja millised on nende võimalikud väärtused.
+
+```{r andmekirjeldus}
+str(andmed)
+```
+
+Milline on tunnuste jaotus? Kui palju on tunnustes andmelünki?
+
+```{r jaotusparameetrid}
+dfSummary(andmed)
+colSums(is.na(andmed)) # Kokkuvõtlikumalt põhimõtteliselt sama info, mis eelneva tabeli viimases veerus
+```
+
+Kõigi tunnuste peale kokku on andmelünki `sum(is.na(andmed))`. Sellest olulisem on aga teada saada, kui suur on indiviidide osakaal, kellel on vähemalt ühes tunnuses andmelünk.
+
+```{r}
+sum(complete.cases(andmed)) # Täielikult mõõdetud indiviidide arv
+sum(!complete.cases(andmed)) # Andmelünkadega indiviidide arv ehk indiviidide arv, kellel on vähemalt ühes tunnuses andmelünk
+sum(!complete.cases(andmed)) / nrow(andmed) # Andmelünkadega indiviidide osakaal andmestikus
+```
+
+Teeme indikaatortunnuse, mis näitab täielike vastustega indiviidide osakaalu andmestikus
+
+andmed$valiidne[complete.cases(andmed)] <- 1
+andmed$valiidne[!complete.cases(andmed)] <- 0
+
+# arvutame täisvastustega indiviidide osakaalu
+mean(andmed$valiidne)
+
+# uurime lünkade juhuslikkust tunnuste lõikes - kas lüngad on MCAR või MAR?
+library(tidyverse)
+andmed %>%
+  group_by(gndr) %>%
+  summarise(valiid_osakaal = mean(valiidne))
+
+andmed %>%
+  group_by(valiidne) %>%
+  summarise(keskm_vanus = mean(agea))
+
+andmed$vanusegrupp <- NA
+andmed$vanusegrupp[andmed$agea >= 15] <- '15-25'
+andmed$vanusegrupp[andmed$agea >= 26] <- '26-35'
+andmed$vanusegrupp[andmed$agea >= 36] <- '36-45'
+andmed$vanusegrupp[andmed$agea >= 46] <- '46-55'
+andmed$vanusegrupp[andmed$agea >= 56] <- '56-65'
+andmed$vanusegrupp[andmed$agea >= 66] <- '66-75'
+andmed$vanusegrupp[andmed$agea >= 76] <- '76+'
+
+table(andmed$vanusegrupp)
+table(andmed$agea, andmed$vanusegrupp)
+
+andmed %>%
+  group_by(vanusegrupp) %>%
+  summarise(valiid_osakaal = mean(valiidne))
+
+valiid_vanusegrupp <- andmed %>%
+  group_by(vanusegrupp) %>%
+  summarise(valiid_osakaal = mean(valiidne))
+
+library(ggplot2)
+ggplot(valiid_vanusegrupp, aes(x = vanusegrupp, y = valiid_osakaal)) +
+  geom_point()
+
+ggplot(valiid_vanusegrupp, aes(x = vanusegrupp, y = valiid_osakaal)) +
+  geom_point() +
+  ylim(0, 1)
+
+# harjutusülesanne: vahel võib täisvastuste indiviidide osakaalu oluliselt tõsta see, kui ühe või mõne tunnuse analüüsist välja jätame, seda muidugi eeldusel, et see/need konkreetsed tunnused ei ole uurimisküsimuse jaoks kesksel kohal. Milline tunnus kõige rohkem täisvastustega indiviidide arvu n-ö kasvatab, ei saa aga hinnata pelgalt igas üksikus tunnuses esinevate andmelünkade arvu järgi, tuleb uurida lünkade esinemise struktuuri. Kui palju tõuseks iga üksiku tunnuse väljajätmisel täisvastustega indiviidide arv? Millise tunnuse väljajätmisest oleks indiviidide arvu mõttes kõige rohkem kasu? Kas kasu on märgatav, st kas see võiks üles kaaluda infokao tunnuse analüüsist väljajätmise näol?
