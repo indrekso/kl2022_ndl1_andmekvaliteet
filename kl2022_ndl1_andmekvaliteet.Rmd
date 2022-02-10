@@ -2,7 +2,11 @@
 title: "Andmekvaliteedi hindamine, andmelünkade ja erindite analüüs"
 author: "Indrek Soidla"
 date: "9 2 2022"
-output: html_document
+output: 
+  html_document:
+    theme: spacelab
+    highlight: tango
+    fig_cap: true
 ---
 
 ```{r setup, include=FALSE}
@@ -21,6 +25,7 @@ library(haven)
 library(foreign)
 library(tidyverse)
 library(summarytools)
+library(naniar)
 ```
 
 Laeme sisse Euroopa Sotsiaaluuringu Eesti 9. laine andmed (2018).
@@ -39,20 +44,13 @@ Eraldame meile huvipakkuvad tunnused.
 
 ```{r andmed}
 andmed <- ee9 %>% 
-  select(stflife, imsmetn, imdfetn, impcntr, imbgeco, imueclt, imwbcnt, rlgdgr, brncntr, gndr, agea, eduyrs)
+  select(stflife, lrscale, imsmetn, imdfetn, impcntr, imbgeco, imueclt, imwbcnt, rlgdgr, brncntr, gndr, agea, eduyrs)
 ```
 
 Vaatame andmekirjeldust, et näha, mis tunnused andmestikus on ja millised on nende võimalikud väärtused.
 
 ```{r andmekirjeldus}
 str(andmed)
-```
-
-Milline on tunnuste jaotus? Kui palju on tunnustes andmelünki?
-
-```{r jaotusparameetrid}
-dfSummary(andmed)
-colSums(is.na(andmed)) # Kokkuvõtlikumalt põhimõtteliselt sama info, mis eelneva tabeli viimases veerus
 ```
 
 Kõigi tunnuste peale kokku on andmelünki `sum(is.na(andmed))`. Sellest olulisem on aga teada saada, kui suur on indiviidide osakaal, kellel on vähemalt ühes tunnuses andmelünk.
@@ -63,16 +61,79 @@ sum(!complete.cases(andmed)) # Andmelünkadega indiviidide arv ehk indiviidide a
 sum(!complete.cases(andmed)) / nrow(andmed) # Andmelünkadega indiviidide osakaal andmestikus
 ```
 
-Teeme indikaatortunnuse, mis näitab täielike vastustega indiviidide osakaalu andmestikus
+Uurime lünklikkust veel lähemalt. Mida näitavad järgnevad kokkuvõtted andmetest?
 
-andmed$valiidne[complete.cases(andmed)] <- 1
-andmed$valiidne[!complete.cases(andmed)] <- 0
+```{r}
+miss_var_summary(andmed)
+miss_var_table(andmed)
+miss_case_table(andmed)
+miss_case_summary(andmed)
+```
 
-# arvutame täisvastustega indiviidide osakaalu
+`naniar` töötab koostöös `dplyr`iga, nii et saame hõlpsalt esitada samu kokkuvõtteid grupiti, nt uurida lünklikkust võrdlevalt meeste ja naiste seas.
+
+```{r}
+andmed %>% 
+  group_by(gndr) %>% 
+  miss_var_summary() %>% 
+  print(n = Inf)
+
+andmed %>% 
+  group_by(gndr) %>% 
+  miss_case_table() %>% 
+  print(n = Inf)
+```
+
+Pilt ütlevat rohkem kui sada sõna (eeldusel, et oskame pilti adekvaatselt tõlgendada). Teeme siis lünklikkusest kiirema ülevaate saamiseks pilte (st jooniseid).
+
+```{r}
+vis_miss(andmed)
+gg_miss_var(andmed)
+gg_miss_case(andmed)
+gg_miss_var(andmed, facet = gndr)
+gg_miss_fct(andmed, fct = gndr)
+```
+
+Eeltoodud joonised andsid sama info, mis eelnevalt arvuliselt saadud kokkuvõtted. Jooniste suurem ülevaatlikkus tuleb paremini esile siis, kui uurime lünklikkuse mustreid.
+
+```{r}
+gg_miss_upset(andmed)
+```
+
+Kui palju täielikult mõõdetud indiviide analüüsi n-ö juurde võidaksime, kui jätaksime välja enesepaigutuse vasak-parem-skaalal?
+
+Kui palju võidaksime juurde täielikult mõõdetud indiviide, kui seejärel jätta välja ka teine kõige suurem lünklikkusega tunnus?
+
+```{r}
+as_shadow(andmed)
+bind_shadow(andmed, only_miss = TRUE)
+```
+
+```{r}
+andmed %>% 
+  bind_shadow() %>% 
+  group_by(imbgeco_NA) %>% 
+  summarise(mean_stflife = mean(stflife, na.rm = TRUE),
+            n_obs = n())
+```
+
+
+Teeme indikaatortunnuse, mis näitab täielike vastustega indiviidide osakaalu andmestikus.
+
+```{r}
+andmed <- andmed %>% 
+  mutate(valiidne = complete.cases(andmed))
+```
+
+Arvutame täisvastustega indiviidide osakaalu.
+
+```{r}
 mean(andmed$valiidne)
+```
 
-# uurime lünkade juhuslikkust tunnuste lõikes - kas lüngad on MCAR või MAR?
-library(tidyverse)
+Uurime lünkade juhuslikkust tunnuste lõikes - kas lüngad on soo ja vanuse suhtes täiesti juhuslikud (MCAR) või juhuslikud (MAR)?
+
+```{r}
 andmed %>%
   group_by(gndr) %>%
   summarise(valiid_osakaal = mean(valiidne))
@@ -80,18 +141,21 @@ andmed %>%
 andmed %>%
   group_by(valiidne) %>%
   summarise(keskm_vanus = mean(agea))
+```
 
-andmed$vanusegrupp <- NA
-andmed$vanusegrupp[andmed$agea >= 15] <- '15-25'
-andmed$vanusegrupp[andmed$agea >= 26] <- '26-35'
-andmed$vanusegrupp[andmed$agea >= 36] <- '36-45'
-andmed$vanusegrupp[andmed$agea >= 46] <- '46-55'
-andmed$vanusegrupp[andmed$agea >= 56] <- '56-65'
-andmed$vanusegrupp[andmed$agea >= 66] <- '66-75'
-andmed$vanusegrupp[andmed$agea >= 76] <- '76+'
+Uurime lünklikkust vanuse suhtes lähemalt, st vanusegrupiti. Loome vanusegrupi tunnuse.
 
+```{r}
+andmed$vanusegrupp <- cut(andmed$agea, c(min(andmed$agea), 25, 35, 45, 55, 65, 75, max(andmed$agea)), include.lowest = TRUE)
+```
+
+Kontrollime, kas ümberkodeerimine toimis.
+
+```{r}
 table(andmed$vanusegrupp)
 table(andmed$agea, andmed$vanusegrupp)
+```
+
 
 andmed %>%
   group_by(vanusegrupp) %>%
