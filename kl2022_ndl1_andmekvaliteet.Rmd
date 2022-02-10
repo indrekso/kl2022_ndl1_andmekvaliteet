@@ -26,6 +26,7 @@ library(foreign)
 library(tidyverse)
 library(summarytools)
 library(naniar)
+library(finalfit)
 ```
 
 Laeme sisse Euroopa Sotsiaaluuringu Eesti 9. laine andmed (2018).
@@ -84,7 +85,7 @@ andmed %>%
   print(n = Inf)
 ```
 
-Pilt ütlevat rohkem kui sada sõna (eeldusel, et oskame pilti adekvaatselt tõlgendada). Teeme siis lünklikkusest kiirema ülevaate saamiseks pilte (st jooniseid).
+Pilt ütlevat rohkem kui sada sõna (eeldusel, et oskame pilti adekvaatselt tõlgendada). Teeme siis lünklikkusest kiirema ülevaate saamiseks pilte (st jooniseid). Mida järgnevatel joonistel kujutatakse?
 
 ```{r}
 vis_miss(andmed)
@@ -102,7 +103,55 @@ gg_miss_upset(andmed)
 
 Kui palju täielikult mõõdetud indiviide analüüsi n-ö juurde võidaksime, kui jätaksime välja enesepaigutuse vasak-parem-skaalal?
 
-Kui palju võidaksime juurde täielikult mõõdetud indiviide, kui seejärel jätta välja ka teine kõige suurem lünklikkusega tunnus?
+Kui palju võidaksime juurde täielikult mõõdetud indiviide, kui seejärel jätta välja ka teine kõige suurem lünklikkusega tunnus? Kas saame selle info olemasolevalt jooniselt kätte?
+
+```{r}
+
+```
+
+Eelnevast analüüsist saime mõningast aimdust, kas lüngad tunnustes võiksid olla täiesti juhuslikud või mitte. Uurime tunnuste jaotuseid iga tunnuse lünklikkuse lõikes, kasutades paketi `finalfit` võimalusi. Et analüüs õnnestuks, tuleb siin tunnuste tüübid korrektselt seadistada, st kategoriaalsed tunnused peaksid olema `factor`id (arvulised tunnused on meie andmestikus niikuinii `numeric` tüüpi). Kaasame praegu ainult need tunnused, kus lünklikkus oli suurem kui 1%, sest joonisele ei mahu liiga palju tunnuseid korraga ära, ning taustatunnused, kus küll lünki polnud, kuid nende tunnuste jaotused võivad siiski olulist infot anda.
+
+```{r}
+andmed$gndr <- as.factor(andmed$gndr)
+andmed$brncntr <- as.factor(andmed$brncntr)
+missing_pairs(andmed, explanatory = c("lrscale", "imbgeco", "imueclt", "imwbcnt", "rlgdgr", "gndr", "brncntr", "agea", "eduyrs"))
+```
+
+NB! Karpdiagrammid ei võimalda tunnuse jaotusest head ülevaadet saada, kui eristuvaid väärtuseid on vähe nagu skaalal 0-10 mõõdetud tunnuste puhul. Ka tuleb siniste ja hallide karpdiagrammide võrdlemisel silmas pidada, et enamikus tunnustest on andmelünki suhteliselt vähe (millele viitab hallide alade väiksus enamusel tulpdiagrammidest), nii et suured erinevused sama rea siniste ja hallide karpdiagrammide vahel võivad tuleneda hoopis juhuslikkusest. Teeme kohe ka mõned statistilised testid, et jälile jõuda, kas see nii võib olla, aga enne vaatame, mida siiski neist diagrammidest lünkade juhuslikkuse kohta järeldada saaksime. 
+
+Kategoriaalsete tunnuste puhul on lünklikkuse võrdlemine kategooriate lõikes ülevaatlikum, kui tulpade kõrgused on võrreldavad. Teeme selleks veidi muudetud joonise, kuigi ka eelmine versioon võib olla oluline, et märgata, kui mõnes kategoorias on väga vähe indiviide.
+
+```{r}
+missing_pairs(andmed, explanatory = c("lrscale", "imbgeco", "imueclt", "imwbcnt", "rlgdgr", "gndr", "brncntr", "agea", "eduyrs"), position = "fill")
+```
+
+Mida jooniselt välja lugeda saame?
+
+Vaatame lähemalt, kas vasak-parem-skaalal enesepaigutuse tunnuse lüngad on täiesti juhuslikud või mitte. Kasutades paketist `finalfit` funktsiooni `missing_compare`, arvutame teiste arvuliste tunnuste keskmised indiviidide seas, kellel on vasak-parem-skaala tunnuses valiidsed väärtused, ja nende seas, kellel on selles tunnuses andmelünk. Kategoriaalsete tunnuste puhul teeme risttabeli. Lisaks hinnatakse jaotuste erinevust statistiliste testidega. Milliste statistiliste testidega? Uuri funktsiooni abifaili, trükkides konsooli `?missing_compare`.
+
+```{r}
+andmed$imsmetn <- as.factor(andmed$imsmetn)
+andmed$imdfetn <- as.factor(andmed$imdfetn)
+andmed$impcntr <- as.factor(andmed$impcntr)
+missing_compare(andmed, dependent = "lrscale", explanatory = c("imsmetn", "imdfetn", "impcntr", "imbgeco", "imueclt", "imwbcnt", "rlgdgr", "gndr", "brncntr", "agea", "eduyrs")) %>% 
+  knitr::kable(row.names=FALSE, align = c("l", "l", "r", "r", "r"))
+```
+
+Mida tulemustest järeldada saame?
+
+Uuri ise, kas immigratsiooni tajutud mõju majandusele mõõtvas tunnuses `imbgeco` esinevad lüngad täiesti juhuslikult (MCAR) või mitte.
+
+```{r imbgeco-lynklikkus}
+
+```
+
+Mida ütlevad hoiatusteated? Tuletage meelde hii-ruut-testi eeldusi.
+
+Mida tulemustest järeldate?
+
+Kui võrrelda lünkade juhuslikkuse usklikkuse tunnuses suhtes eelnevalt vasak-parem-skaalal enesepaigutuse tunnuses ja nüüd immigratsiooni mõju hinnangute tunnuses, siis erinevused usklikkuses on keskmiselt samad. Siiski on eelmises tabelis näha, et nt olulisuse nivool 0.05 oli erinevus statistiliselt oluline, `imbgeco` lünklikkuse puhul aga mitte. Kuidas nii? Kuidas siis peaks neid tulemusi tõlgendada?
+
+Kuidas üleüldse neid statistiliste testide tulemusi tõlgendada, kui statistilise testi eesmärk on teada saada, kas mingit erinevuse või seose esinemist saab väita mitte ainult valimis, vaid ka populatsioonis? Saab ju andmete lünklikkus esineda ainult valimis ehk küsitlusandmetes, mitte populatsioonis.
 
 ```{r}
 as_shadow(andmed)
@@ -115,6 +164,12 @@ andmed %>%
   group_by(imbgeco_NA) %>% 
   summarise(mean_stflife = mean(stflife, na.rm = TRUE),
             n_obs = n())
+
+andmed %>%
+  bind_shadow() %>%
+  ggplot(aes(x = imbgeco,
+             fill = lrscale_NA)) + 
+  geom_histogram(alpha = 0.5)
 ```
 
 
