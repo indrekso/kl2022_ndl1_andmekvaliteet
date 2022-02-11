@@ -2,7 +2,11 @@
 title: 'Andmekvaliteedi hindamine: erindite analüüs'
 author: "Indrek Soidla"
 date: "11 2 2022"
-output: html_document
+output: 
+  html_document:
+    theme: spacelab
+    highlight: tango
+    fig_cap: true
 ---
 
 ```{r setup, include=FALSE}
@@ -50,7 +54,7 @@ descr(data$noimbro)
 freq(data$noimbro)
 ```
 
-Vaatame tunnuse histogrammi ja karpdiagrammi.
+Mnjah, tunnuse jaotus pole eriti ülevaatlik, sest erinevaid väärtuseid on palju. Sellist tabelit võib ise uurida-puurida, aga teistele analüüsitulemustes esitada pole hea mõte. Vaatame tunnuse histogrammi ja karpdiagrammi, mis on kokkuvõtlikumad.
 
 ```{r}
 hist(data$noimbro, breaks = 20)
