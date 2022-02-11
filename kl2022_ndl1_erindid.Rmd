@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Teeme läbi mõned erindite analüüsimise näited samade andmetega, mida kasutasin loenguslaididel. 
+
 ## Pakettide ja andmete laadimine
 
 Laeme sisse vajalikud paketid.
@@ -32,39 +34,92 @@ Kui Maciga tekib probleeme andmete sisselugemisel või nende töötlemisel, või
 ee7 <- read.spss("data/ESS7EE.sav", to.data.frame = TRUE, use.value.labels = FALSE)
 ```
 
+Eraldame analüüsiks vajalikud tunnused.
+
+```{r}
+data <- ee7 %>% 
+  select(noimbro, eduyrs, gndr, brncntr)
+```
+
+## Ühemõõtmelised erindid
+
 Uurime jaotusparameetreid.
 
 ```{r andmed}
-descr(ee7$noimbro)
-freq(ee7$noimbro)
+descr(data$noimbro)
+freq(data$noimbro)
 ```
 
 Vaatame tunnuse histogrammi ja karpdiagrammi.
 
 ```{r}
-hist(ee7$noimbro, breaks = 20)
-hist(ee7$noimbro, breaks = 40)
+hist(data$noimbro, breaks = 20)
+hist(data$noimbro, breaks = 40)
 
-boxplot(ee7$noimbro)
+boxplot(data$noimbro)
 ```
 
-# kui palju on erindeid karpdiagrammi / kvartiilhaarde põhjal?
-length(ee7$noimbro[ee7$noimbro > 60 & !is.na(ee7$noimbro)])
-freq(ee7$noimbro[ee7$noimbro > 60 & !is.na(ee7$noimbro)])
+Kui palju on tunnuses erindeid karpdiagrammi / kvartiilhaarde põhjal?
 
-# kui palju on erindeid z-skooride põhjal?
-ee7$noimbroZ <- as.numeric(scale(ee7$noimbro))
-freq(ee7$noimbroZ)
+```{r}
+data %>% 
+  subset(noimbro > 60) %>% 
+  nrow()
+```
 
-freq(ee7$noimbro[ee7$noimbroZ > 2.5 & !is.na(ee7$noimbro)])
-freq(ee7$noimbro[ee7$noimbroZ > 3 & !is.na(ee7$noimbro)])
-freq(ee7$noimbro[ee7$noimbroZ > 3.5 & !is.na(ee7$noimbro)])
+Millised väärtused kvalifitseeruvad eelneva kriteeriumi alusel erandlikeks?
 
-# harjutusülesanne: kas tunnuse noimbro poolest erandlike väärtustega indiviidid erinevad millegi poolest tavaväärtustega indiviididest? Kas mõne indiviidi puhul torkab midagi eripärast silma, mis aitaks mõista, mis võib erandliku väärtuse põhjuseks olla?
+```{r}
+data %>% 
+  subset(noimbro > 60, select = noimbro) %>% 
+  freq()
+```
 
-# mitmemõõtmelised erindid
-ggplot(ee7, aes(x = noimbro, y = eduyrs)) +
+Arvutame ka z-skoorid, et nende põhjal erindeid uurida.
+
+```{r}
+data <- data %>% 
+  mutate(noimbro_z = as.numeric(scale(noimbro)))
+```
+
+Kui palju on erindeid z-skooride põhjal?
+
+```{r}
+freq(data$noimbro_z)
+```
+
+Näeme siit erindite jaotust, aga mitte eriti ülevaatlikult. Vaatame, kui palju on erindeid erinevate lävendite korral.
+
+```{r}
+data %>% 
+  subset(noimbro_z > 2.5, select = noimbro) %>% 
+  freq()
+
+data %>% 
+  subset(noimbro_z > 3, select = noimbro) %>% 
+  freq()
+
+data %>% 
+  subset(noimbro_z > 3.5, select = noimbro) %>% 
+  freq()
+```
+
+Harjutusülesanne: kas tunnuse noimbro poolest erandlike väärtustega indiviidid erinevad millegi poolest tavaväärtustega indiviididest? Kas mõne indiviidi puhul torkab midagi eripärast silma, mis aitaks mõista, mis võib erandliku väärtuse põhjuseks olla?
+
+```{r harjutusylesanne}
+
+```
+
+## Mitmemõõtmelised erindid
+
+Uurime, kas väljaspool Eestit sündinud inimeste tajutud osakaalu ja haridustee pikkuse väärtuste kombinatsioon võiks mõnede indiviidide puhul kvalifitseeruda erindina. Eeldame, et kõrgelt haritud vastajad võiksid osata immigratsiooni puudutavaid näitajaid adekvaatselt hinnata - kui ilmneb selle eeldusega tugevalt vastuolus olevaid väärtuste kombinatsioone, võiks neid käsitleda erandlikena.
+
+```{r}
+ggplot(data, aes(x = noimbro, y = eduyrs)) +
   geom_count() +
   geom_segment(x = 38, y = 18.5, xend = 38, yend = 33) +
-  geom_segment(x = 38, y = 18.5, xend = 90, yend = 18.5)
+  geom_segment(x = 38, y = 18.5, xend = 90, yend = 18.5) +
+  xlab("Väljaspool Eestit sündinud inimeste tajutud osakaal riigis") +
+  ylab("Haridustee pikkus aastates")
 
+```
