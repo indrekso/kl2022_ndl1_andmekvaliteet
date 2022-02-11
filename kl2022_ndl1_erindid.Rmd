@@ -1,0 +1,70 @@
+---
+title: 'Andmekvaliteedi hindamine: erindite analüüs'
+author: "Indrek Soidla"
+date: "11 2 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Pakettide ja andmete laadimine
+
+Laeme sisse vajalikud paketid.
+
+```{r paketid, message = FALSE}
+library(haven)
+library(foreign)
+library(tidyverse)
+library(summarytools)
+```
+
+Laeme sisse Euroopa Sotsiaaluuringu Eesti 9. laine andmed (2018).
+
+```{r ess-andmed}
+ee7 <- read_sav("data/ESS7EE.sav")
+```
+
+Kui Maciga tekib probleeme andmete sisselugemisel või nende töötlemisel, võib proovida andmed sisse lugeda paketiga `foreign`.
+
+```{r ess-andmed-2}
+ee7 <- read.spss("data/ESS7EE.sav", to.data.frame = TRUE, use.value.labels = FALSE)
+```
+
+Uurime jaotusparameetreid.
+
+```{r andmed}
+descr(ee7$noimbro)
+freq(ee7$noimbro)
+```
+
+Vaatame tunnuse histogrammi ja karpdiagrammi.
+
+```{r}
+hist(ee7$noimbro, breaks = 20)
+hist(ee7$noimbro, breaks = 40)
+
+boxplot(ee7$noimbro)
+```
+
+# kui palju on erindeid karpdiagrammi / kvartiilhaarde põhjal?
+length(ee7$noimbro[ee7$noimbro > 60 & !is.na(ee7$noimbro)])
+freq(ee7$noimbro[ee7$noimbro > 60 & !is.na(ee7$noimbro)])
+
+# kui palju on erindeid z-skooride põhjal?
+ee7$noimbroZ <- as.numeric(scale(ee7$noimbro))
+freq(ee7$noimbroZ)
+
+freq(ee7$noimbro[ee7$noimbroZ > 2.5 & !is.na(ee7$noimbro)])
+freq(ee7$noimbro[ee7$noimbroZ > 3 & !is.na(ee7$noimbro)])
+freq(ee7$noimbro[ee7$noimbroZ > 3.5 & !is.na(ee7$noimbro)])
+
+# harjutusülesanne: kas tunnuse noimbro poolest erandlike väärtustega indiviidid erinevad millegi poolest tavaväärtustega indiviididest? Kas mõne indiviidi puhul torkab midagi eripärast silma, mis aitaks mõista, mis võib erandliku väärtuse põhjuseks olla?
+
+# mitmemõõtmelised erindid
+ggplot(ee7, aes(x = noimbro, y = eduyrs)) +
+  geom_count() +
+  geom_segment(x = 38, y = 18.5, xend = 38, yend = 33) +
+  geom_segment(x = 38, y = 18.5, xend = 90, yend = 18.5)
+

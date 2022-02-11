@@ -1,5 +1,5 @@
 ---
-title: "Andmekvaliteedi hindamine, andmelünkade ja erindite analüüs"
+title: "Andmekvaliteedi hindamine, andmelünkade analüüs"
 author: "Indrek Soidla"
 date: "9 2 2022"
 output: 
