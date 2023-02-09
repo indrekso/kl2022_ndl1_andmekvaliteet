@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Laeme sisse vajalikud paketid.
 
-```{r paketid, message = FALSE}
+```{r paketid, message = FALSE, warning = FALSE}
 library(haven)
 library(foreign)
 library(tidyverse)
@@ -114,7 +114,7 @@ Kui palju võidaksime juurde täielikult mõõdetud indiviide, kui seejärel jä
 
 Eelnevast analüüsist saime mõningast aimdust, kas lüngad tunnustes võiksid olla täiesti juhuslikud või mitte. Uurime tunnuste jaotuseid iga tunnuse lünklikkuse lõikes, kasutades paketi `finalfit` võimalusi. Et analüüs õnnestuks, tuleb siin tunnuste tüübid korrektselt seadistada, st kategoriaalsed tunnused peaksid olema `factor`id (arvulised tunnused on meie andmestikus niikuinii `numeric` tüüpi). Kaasame praegu ainult need tunnused, kus lünklikkus oli suurem kui 1%, sest joonisele ei mahu liiga palju tunnuseid korraga ära, ning taustatunnused, kus küll lünki polnud, kuid nende tunnuste jaotused võivad siiski olulist infot anda.
 
-```{r warning = FALSE}
+```{r warning = FALSE, message = FALSE}
 andmed$gndr <- as.factor(andmed$gndr)
 andmed$brncntr <- as.factor(andmed$brncntr)
 missing_pairs(andmed, 
@@ -126,7 +126,7 @@ NB! Karpdiagrammid ei võimalda tunnuse jaotusest head ülevaadet saada, kui eri
 
 Kategoriaalsete tunnuste puhul on lünklikkuse võrdlemine kategooriate lõikes ülevaatlikum, kui tulpade kõrgused on võrreldavad. Teeme selleks veidi muudetud joonise, kuigi ka eelmine versioon võib olla oluline, et märgata, kui mõnes kategoorias on väga vähe indiviide.
 
-```{r warning = FALSE}
+```{r warning = FALSE, message = FALSE}
 missing_pairs(andmed, 
               explanatory = c("lrscale", "imbgeco", "imueclt", "imwbcnt", "rlgdgr", "gndr", 
                               "brncntr", "agea", "eduyrs"), 
@@ -183,7 +183,7 @@ andmed <- andmed %>%
 
 Uurime, kas need kaks gruppi erinevad teiste tunnuste jaotuste poolest.
 
-```{r warning = FALSE}
+```{r warning = FALSE, message = FALSE}
 missing_pairs(andmed, 
               explanatory = c("lrscale", "imbgeco", "imueclt", "imwbcnt", "rlgdgr", "gndr", 
                               "brncntr", "agea", "eduyrs", "any_miss_all"), 
