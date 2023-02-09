@@ -1,7 +1,7 @@
 ---
 title: "Andmekvaliteedi hindamine, andmelünkade analüüs"
 author: "Indrek Soidla"
-date: "9 2 2022"
+date: "9 2 2023"
 output: 
   html_document:
     theme: spacelab
@@ -11,9 +11,6 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-if (dir.exists("C:/Users/Public/Rstudio_packages")) {
-  .libPaths("C:/Users/Public/Rstudio_packages")
-}
 ```
 
 ## Pakettide ja andmete laadimine
@@ -38,7 +35,7 @@ ee9 <- read_sav("data/ESS9EE.sav")
 Kui Maciga tekib probleeme andmete sisselugemisel või nende töötlemisel, võib proovida andmed sisse lugeda paketiga `foreign`.
 
 ```{r ess-andmed-2}
-ee9 <- read.spss("data/ESS9EE.sav", to.data.frame = TRUE, use.value.labels = FALSE)
+# ee9 <- read.spss("data/ESS9EE.sav", to.data.frame = TRUE, use.value.labels = FALSE)
 ```
 
 Eraldame meile huvipakkuvad tunnused.
@@ -102,7 +99,7 @@ gg_miss_fct(andmed, fct = gndr)
 Eeltoodud joonised andsid sama info, mis eelnevalt arvuliselt saadud kokkuvõtted. Jooniste suurem ülevaatlikkus tuleb paremini esile siis, kui uurime lünklikkuse mustreid.
 
 ```{r mustrid}
-gg_miss_upset(andmed)
+gg_miss_upset(andmed, nsets = n_var_miss(andmed))
 ```
 
 Kui palju täielikult mõõdetud indiviide analüüsi n-ö juurde võidaksime, kui jätaksime välja enesepaigutuse vasak-parem-skaalal?
